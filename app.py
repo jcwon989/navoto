@@ -331,123 +331,127 @@ def main():
     if not os.path.exists("./data"):
         os.makedirs("./data")
     
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.title("NOVATO 스탯 매니저")
-    with col2:
-        with st.popover("📊 업로드"):
-            uploaded_file = st.file_uploader("경기 기록 파일 선택", type=['csv'])
-            
-            if uploaded_file:
-                try:
-                    # 파일을 data 폴더에 저장
-                    file_path = os.path.join("./data", uploaded_file.name)
-                    with open(file_path, "wb") as f:
-                        f.write(uploaded_file.getvalue())
-                    st.success(f"파일 '{uploaded_file.name}'이 성공적으로 저장되었습니다!")
-                    
-                    # 파일 처리
-                    df = pd.read_csv(uploaded_file)
-                    
-                    # 파일명에서 정보 추출
-                    game_date, team1, team2 = extract_info_from_filename(uploaded_file.name)
-                    
-                    if game_date and not is_game_exists(game_date, team1, team2):
-                        with st.spinner("데이터를 저장하는 중..."):
-                            if save_to_db(file_path, game_date, team1, team2):
-                                st.success("새로운 경기 데이터가 저장되었습니다!")
-                                st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"파일 처리 중 오류가 발생했습니다: {str(e)}")
-    
+    # 업로드 버튼을 좌측에 배치
+    with st.expander("📊 업로드", expanded=False):
+        uploaded_file = st.file_uploader("경기 기록 파일 선택", type=['csv'])
+        
+        if uploaded_file:
+            try:
+                # 파일을 data 폴더에 저장
+                file_path = os.path.join("./data", uploaded_file.name)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getvalue())
+                st.success(f"파일 '{uploaded_file.name}'이 성공적으로 저장되었습니다!")
+                
+                # 파일 처리
+                df = pd.read_csv(uploaded_file)
+                
+                # 파일명에서 정보 추출
+                game_date, team1, team2 = extract_info_from_filename(uploaded_file.name)
+                
+                if game_date and not is_game_exists(game_date, team1, team2):
+                    with st.spinner("데이터를 저장하는 중..."):
+                        if save_to_db(file_path, game_date, team1, team2):
+                            st.success("새로운 경기 데이터가 저장되었습니다!")
+                            st.rerun()
+                
+            except Exception as e:
+                st.error(f"파일 처리 중 오류가 발생했습니다: {str(e)}")
+
+    # 타이틀 표시
+    st.title("NOVATO 스탯 매니저")
+
     # 기존 파일 목록 표시
     files = [f for f in os.listdir("./data") if f.endswith('.csv')]
-    
+
     if files:
         selected_file = st.selectbox(
             "경기를 선택하세요",
             options=files,
             format_func=lambda x: x
         )
+    
+    # 선택된 경기 표시
+    if files and selected_file:
+        file_path = os.path.join("./data", selected_file)
+        game_date, team1, team2 = extract_info_from_filename(selected_file)
         
-        if selected_file:
-            file_path = os.path.join("./data", selected_file)
-            game_date, team1, team2 = extract_info_from_filename(selected_file)
+        
+        
+        if game_date:
+            # CSV 파일 읽기
+            df = pd.read_csv(file_path)
+            team1_players, team1_total, team2_players, team2_total = extract_team_data(df)
             
-            if game_date:
-                # CSV 파일 읽기
-                df = pd.read_csv(file_path)
-                team1_players, team1_total, team2_players, team2_total = extract_team_data(df)
-                
-                # 제목에 경기 정보 표시
-                game_date_formatted = datetime.strptime(game_date, '%Y-%m-%d').strftime('%Y년 %m월 %d일')
-                st.title(f"{team1} vs {team2}")
-                st.header(game_date_formatted, divider='red')
-                
-                # 팀 스탯 표시
-                st.header("팀 스탯")
-                stats_columns = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV', 
-                               '2PM', '2PA', '3PM', '3PA', 'FTM', 'FTA']
-                
-                # 각 스탯의 승리 여부 (True: team1이 이김, False: team2가 이김)
-                better_stats = {
-                    'PTS': team1_total['PTS'] > team2_total['PTS'],  # 높은 게 좋음
-                    'REB': team1_total['REB'] > team2_total['REB'],  # 높은 게 좋음
-                    'AST': team1_total['AST'] > team2_total['AST'],  # 높은 게 좋음
-                    'STL': team1_total['STL'] > team2_total['STL'],  # 높은 게 좋음
-                    'BLK': team1_total['BLK'] > team2_total['BLK'],  # 높은 게 좋음
-                    'TOV': team1_total['TOV'] < team2_total['TOV'],  # 낮은 게 좋음
-                    '2PM': team1_total['2PM'] > team2_total['2PM'],  # 높은 게 좋음
-                    '2PA': team1_total['2PA'] < team2_total['2PA'],  # 낮은 게 좋음
-                    '3PM': team1_total['3PM'] > team2_total['3PM'],  # 높은 게 좋음
-                    '3PA': team1_total['3PA'] < team2_total['3PA'],  # 낮은 게 좋음
-                    'FTM': team1_total['FTM'] > team2_total['FTM'],  # 높은 게 좋음
-                    'FTA': team1_total['FTA'] < team2_total['FTA']   # 낮은 게 좋음
-                }
-                
-                team_stats_df = pd.DataFrame({
-                    team1: [team1_total[col] for col in stats_columns],
-                    '팀 스탯': ['득점', '리바운드', '어시스트', '스틸', '블록', '턴오버',
-                             '2점 성공', '2점 시도', '3점 성공', '3점 시도', '자유투 성공', '자유투 시도'],
-                    team2: [team2_total[col] for col in stats_columns]
-                })
-                
-                # 스타일 적용
-                def style_team1(val):
-                    if pd.isna(val):
-                        return ''
-                    for i, stat in enumerate(stats_columns):
-                        if val == team1_total[stat]:
-                            return 'color: red' if better_stats[stat] else ''
+            # 제목에 경기 정보 표시
+            game_date_formatted = datetime.strptime(game_date, '%Y-%m-%d').strftime('%Y년 %m월 %d일')
+            st.subheader("", divider='red')
+            st.title(f"{team1} vs {team2}")
+            st.subheader(game_date_formatted)
+            
+            # 팀 스탯 표시
+            st.header("팀 스탯")
+            stats_columns = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV', 
+                           '2PM', '2PA', '3PM', '3PA', 'FTM', 'FTA']
+            
+            # 각 스탯의 승리 여부 (True: team1이 이김, False: team2가 이김)
+            better_stats = {
+                'PTS': team1_total['PTS'] > team2_total['PTS'],  # 높은 게 좋음
+                'REB': team1_total['REB'] > team2_total['REB'],  # 높은 게 좋음
+                'AST': team1_total['AST'] > team2_total['AST'],  # 높은 게 좋음
+                'STL': team1_total['STL'] > team2_total['STL'],  # 높은 게 좋음
+                'BLK': team1_total['BLK'] > team2_total['BLK'],  # 높은 게 좋음
+                'TOV': team1_total['TOV'] < team2_total['TOV'],  # 낮은 게 좋음
+                '2PM': team1_total['2PM'] > team2_total['2PM'],  # 높은 게 좋음
+                '2PA': team1_total['2PA'] < team2_total['2PA'],  # 낮은 게 좋음
+                '3PM': team1_total['3PM'] > team2_total['3PM'],  # 높은 게 좋음
+                '3PA': team1_total['3PA'] < team2_total['3PA'],  # 낮은 게 좋음
+                'FTM': team1_total['FTM'] > team2_total['FTM'],  # 높은 게 좋음
+                'FTA': team1_total['FTA'] < team2_total['FTA']   # 낮은 게 좋음
+            }
+            
+            team_stats_df = pd.DataFrame({
+                team1: [team1_total[col] for col in stats_columns],
+                '팀 스탯': ['득점', '리바운드', '어시스트', '스틸', '블록', '턴오버',
+                         '2점 성공', '2점 시도', '3점 성공', '3점 시도', '자유투 성공', '자유투 시도'],
+                team2: [team2_total[col] for col in stats_columns]
+            })
+            
+            # 스타일 적용
+            def style_team1(val):
+                if pd.isna(val):
                     return ''
-                
-                def style_team2(val):
-                    if pd.isna(val):
-                        return ''
-                    for i, stat in enumerate(stats_columns):
-                        if val == team2_total[stat]:
-                            return 'color: red' if not better_stats[stat] else ''
+                for i, stat in enumerate(stats_columns):
+                    if val == team1_total[stat]:
+                        return 'color: red' if better_stats[stat] else ''
+                return ''
+            
+            def style_team2(val):
+                if pd.isna(val):
                     return ''
+                for i, stat in enumerate(stats_columns):
+                    if val == team2_total[stat]:
+                        return 'color: red' if not better_stats[stat] else ''
+                return ''
+            
+            # 스타일 적용
+            styled_df = team_stats_df.style.applymap(style_team1, subset=[team1]) \
+                                          .applymap(style_team2, subset=[team2]) \
+                                          .set_properties(**{'font-weight': 'bold'}, subset=['팀 스탯'])
+            
+            st.dataframe(styled_df, hide_index=True)
+            
+            # 선수 기록 표시
+            st.header("선수 기록")
+            tab1, tab2 = st.tabs([team1, team2])
+            
+            with tab1:
+                show_player_stats(team1_players, team1, game_date)
                 
-                # 스타일 적용
-                styled_df = team_stats_df.style.applymap(style_team1, subset=[team1]) \
-                                              .applymap(style_team2, subset=[team2]) \
-                                              .set_properties(**{'font-weight': 'bold'}, subset=['팀 스탯'])
-                
-                st.dataframe(styled_df, hide_index=True)
-                
-                # 선수 기록 표시
-                st.header("선수 기록")
-                tab1, tab2 = st.tabs([team1, team2])
-                
-                with tab1:
-                    show_player_stats(team1_players, team1, game_date)
-                    
-                with tab2:
-                    show_player_stats(team2_players, team2, game_date)
-    else:
-        st.info("저장된 경기 기록이 없습니다.")
+            with tab2:
+                show_player_stats(team2_players, team2, game_date)
+        else:
+            st.info("저장된 경기 기록이 없습니다.")
 
 if __name__ == "__main__":
     main()
