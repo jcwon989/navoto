@@ -1,0 +1,17 @@
+# data 디렉토리의 모든 파일 무시
+/data/*
+
+# data/README.md 파일은 추적
+!/data/README.md
+
+__pycache__/*
+test_xls.py
+font/Pretendard-Black.ttf
+font/Pretendard-ExtraBold.ttf
+font/Pretendard-ExtraLight.ttf
+font/Pretendard-Light.ttf
+font/Pretendard-Medium.ttf
+font/Pretendard-Regular22.ttf
+font/Pretendard-SemiBold.ttf
+font/Pretendard-Thin.ttf
+font/Pretendard-Bold.ttf
