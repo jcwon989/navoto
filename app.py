@@ -10,6 +10,13 @@ from data_loader import load_game_data
 from database import (init_db, is_game_exists, save_game_data, get_player_stats,
                      create_league, get_leagues, assign_game_to_league, get_league_games,
                      get_player_career_stats, DB_PATH)
+from components.player_page import show_player_page
+
+# 페이지 설정을 가장 먼저 호출
+st.set_page_config(
+    page_title="농구 기록 관리",
+    layout="wide"
+)
 
 # Pretendard 폰트 설정
 from matplotlib import font_manager
@@ -22,6 +29,7 @@ plt.rcParams['axes.unicode_minus'] = False
 # CSS 스타일 정의
 st.markdown("""
 <style>
+    
     /* 상단 여백 제거 */
     .block-container {
         padding-top: 0;
@@ -221,6 +229,9 @@ def show_game_page():
             options=leagues_df['league_id'].tolist(),
             format_func=lambda x: leagues_df[leagues_df['league_id'] == x]['league_name'].iloc[0]
         )
+        # 선택된 리그를 session_state에 저장
+        st.session_state.selected_league = selected_league
+        st.session_state.selected_league_name = leagues_df[leagues_df['league_id'] == selected_league]['league_name'].iloc[0]
         
         # 선택된 리그의 경기 목록
         games_df = get_league_games(selected_league)
@@ -289,79 +300,6 @@ def show_game_page():
             st.info("선택한 리그에 등록된 경기가 없습니다.")
     else:
         st.info("등록된 리그가 없습니다. 먼저 리그를 등록해주세요.")
-
-def show_player_page():
-    """선수 기록 페이지"""
-    st.title("선수 통산 기록")
-    
-    # 팀 선택 (선택 사항)
-    all_teams = pd.read_sql_query(
-        'SELECT DISTINCT team FROM players ORDER BY team',
-        sqlite3.connect(DB_PATH)
-    )['team'].tolist()
-    
-    selected_team = st.selectbox("팀 선택 (선택사항)", ["전체"] + all_teams)
-    
-    # 선수 선택
-    if selected_team == "전체":
-        players = pd.read_sql_query(
-            'SELECT DISTINCT player_name FROM players ORDER BY player_name',
-            sqlite3.connect(DB_PATH)
-        )['player_name'].tolist()
-    else:
-        players = pd.read_sql_query(
-            'SELECT DISTINCT player_name FROM players WHERE team = ? ORDER BY player_name',
-            sqlite3.connect(DB_PATH),
-            params=(selected_team,)
-        )['player_name'].tolist()
-    
-    if players:
-        selected_player = st.selectbox("선수 선택", players)
-        
-        # 선수 통산 기록 조회
-        career_stats = get_player_career_stats(
-            selected_player,
-            selected_team if selected_team != "전체" else None
-        )
-        
-        if career_stats is not None:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("기본 기록")
-                basic_stats = pd.DataFrame({
-                    '항목': ['경기수', '평균득점', '평균리바운드', '평균어시스트',
-                           '평균스틸', '평균블록', '평균턴오버'],
-                    '기록': [
-                        career_stats['games_played'],
-                        f"{career_stats['avg_points']:.1f}",
-                        f"{career_stats['avg_rebounds']:.1f}",
-                        f"{career_stats['avg_assists']:.1f}",
-                        f"{career_stats['avg_steals']:.1f}",
-                        f"{career_stats['avg_blocks']:.1f}",
-                        f"{career_stats['avg_turnovers']:.1f}"
-                    ]
-                })
-                st.dataframe(basic_stats, hide_index=True)
-            
-            with col2:
-                st.subheader("슈팅 기록")
-                shooting_stats = pd.DataFrame({
-                    '구분': ['2점슛', '3점슛', '자유투'],
-                    '성공/시도': [
-                        f"{career_stats['total_2pm']}/{career_stats['total_2pa']}",
-                        f"{career_stats['total_3pm']}/{career_stats['total_3pa']}",
-                        f"{career_stats['total_ftm']}/{career_stats['total_fta']}"
-                    ],
-                    '성공률': [
-                        f"{(career_stats['total_2pm']/career_stats['total_2pa']*100 if career_stats['total_2pa'] > 0 else 0):.1f}%",
-                        f"{(career_stats['total_3pm']/career_stats['total_3pa']*100 if career_stats['total_3pa'] > 0 else 0):.1f}%",
-                        f"{(career_stats['total_ftm']/career_stats['total_fta']*100 if career_stats['total_fta'] > 0 else 0):.1f}%"
-                    ]
-                })
-                st.dataframe(shooting_stats, hide_index=True)
-    else:
-        st.info("등록된 선수가 없습니다.")
 
 def show_upload_page():
     """업로드 페이지"""
@@ -442,6 +380,7 @@ def show_upload_page():
 def main():
     # data 폴더가 없으면 생성
     os.makedirs("./data", exist_ok=True)
+    os.makedirs("./pages", exist_ok=True)  # pages 폴더도 생성
     
     # 데이터베이스 초기화 (앱 시작 시 한 번만)
     if 'db_initialized' not in st.session_state:
@@ -453,10 +392,8 @@ def main():
     
     with tab1:
         show_game_page()
-    
     with tab2:
         show_player_page()
-    
     with tab3:
         show_upload_page()
 

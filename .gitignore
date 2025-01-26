@@ -15,3 +15,5 @@ font/Pretendard-Regular22.ttf
 font/Pretendard-SemiBold.ttf
 font/Pretendard-Thin.ttf
 font/Pretendard-Bold.ttf
+components/__pycache__/*
+.DS_Store
