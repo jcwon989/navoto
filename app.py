@@ -11,6 +11,7 @@ from database import (init_db, is_game_exists, save_game_data, get_player_stats,
                      create_league, get_leagues, assign_game_to_league, get_league_games,
                      get_player_career_stats, DB_PATH)
 from components.player_page import show_player_page
+import plotly.graph_objects as go
 
 # 페이지 설정을 가장 먼저 호출
 st.set_page_config(
@@ -29,16 +30,25 @@ plt.rcParams['axes.unicode_minus'] = False
 # CSS 스타일 정의
 st.markdown("""
 <style>
-    
     /* 상단 여백 제거 */
     .block-container {
         padding-top: 0;
         margin-top: 0;
+        padding-left: 5rem !important;
+        padding-right: 5rem !important;
     }
     
     /* 헤더 여백 제거 */
     header {
         margin-top: -2rem;
+    }
+    
+    /* 모바일 화면에서는 패딩 축소 */
+    @media (max-width: 640px) {
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
     }
     
     /* 기존 스타일 유지 */
@@ -169,51 +179,123 @@ def show_player_stats(df, team_name, game_date):
         player_stats = get_player_stats(game_date, team_name, selected_player)
         
         if player_stats is not None:
+            st.write(f"### {selected_player} 상세 기록")
+            
             # 선수 기록 표시
+            st.write("선수 기록")
+            
+            # 데이터를 세 줄로 나누어 표시
+            row1_stats = pd.DataFrame([{
+                '시간': f"{player_stats['minutes']}분",
+                '득점': player_stats['points'],
+                'FGM-A': f"{player_stats['field_goals_made']}-{player_stats['field_goals_attempt']}",
+                'FG%': f"{(player_stats['field_goals_made']/player_stats['field_goals_attempt']*100):.1f}%" if player_stats['field_goals_attempt'] > 0 else "0.0%",
+                '2PM-A': f"{player_stats['two_points_made']}-{player_stats['two_points_attempt']}",
+                '2P%': f"{(player_stats['two_points_made']/player_stats['two_points_attempt']*100):.1f}%" if player_stats['two_points_attempt'] > 0 else "0.0%"
+            }])
+
+            row2_stats = pd.DataFrame([{
+                '3PM-A': f"{player_stats['three_points_made']}-{player_stats['three_points_attempt']}",
+                '3P%': f"{(player_stats['three_points_made']/player_stats['three_points_attempt']*100):.1f}%" if player_stats['three_points_attempt'] > 0 else "0.0%",
+                'FTM-A': f"{player_stats['free_throws_made']}-{player_stats['free_throws_attempt']}",
+                'FT%': f"{(player_stats['free_throws_made']/player_stats['free_throws_attempt']*100):.1f}%" if player_stats['free_throws_attempt'] > 0 else "0.0%",
+                'REB': f"O/D {player_stats['offensive_rebounds']}/{player_stats['defensive_rebounds']} ({player_stats['rebounds']})",
+                'AST': player_stats['assists']
+            }])
+
+            row3_stats = pd.DataFrame([{
+                'STL': player_stats['steals'],
+                'BLK': player_stats['blocks'],
+                'TOV': player_stats['turnovers'],
+                'PF': player_stats['fouls'],
+                '+/-': player_stats['plus_minus'],
+                'EFF': player_stats['efficiency']
+            }])
+
+            # 열 설정
+            def get_column_config(df):
+                config = {}
+                for col in df.columns:
+                    if col in ['시간', 'FG%', '2P%', '3P%', 'FT%', 'FGM-A', '2PM-A', '3PM-A', 'FTM-A', 'REB']:
+                        config[col] = st.column_config.TextColumn(
+                            col,
+                            help=f"{col} 기록",
+                            width="small"
+                        )
+                    else:
+                        config[col] = st.column_config.NumberColumn(
+                            col,
+                            help=f"{col} 기록",
+                            width="small"
+                        )
+                return config
+
+            # CSS로 자동 줄바꿈 설정
+            st.markdown("""
+            <style>
+            [data-testid="stDataFrame"] table {
+                white-space: normal !important;
+            }
+            [data-testid="stDataFrame"] td {
+                white-space: normal !important;
+                min-width: 50px !important;
+                max-width: 100px !important;
+                overflow-wrap: break-word !important;
+                word-wrap: break-word !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            # 각 행 표시
+            st.dataframe(row1_stats, hide_index=True, column_config=get_column_config(row1_stats), use_container_width=True)
+            st.dataframe(row2_stats, hide_index=True, column_config=get_column_config(row2_stats), use_container_width=True)
+            st.dataframe(row3_stats, hide_index=True, column_config=get_column_config(row3_stats), use_container_width=True)
+            
+            # 레이더 차트
             col1, col2 = st.columns(2)
             
             with col1:
-                # 선수 번호 가져오기 (DB에서)
-                player_number = player_stats['player_number']
-                st.write(f"**{player_number}번 {selected_player}의 기본 기록**")
-                
-                # 기본 기록을 데이터프레임으로 표시
-                basic_stats = pd.DataFrame({
-                    '항목': ['득점', '리바운드', '어시스트', '스틸', '블록', '턴오버'],
-                    '기록': [
-                        player_stats['points'],
-                        player_stats['rebounds'],
-                        player_stats['assists'],
-                        player_stats['steals'],
-                        player_stats['blocks'],
-                        player_stats['turnovers']
-                    ]
-                })
-                st.dataframe(basic_stats, hide_index=True)
+                # 슈팅 차트
+                shooting_percentages = {
+                    '2점슛': (player_stats['two_points_made']/player_stats['two_points_attempt']*100 if player_stats['two_points_attempt'] > 0 else 0),
+                    '3점슛': (player_stats['three_points_made']/player_stats['three_points_attempt']*100 if player_stats['three_points_attempt'] > 0 else 0),
+                    '자유투': (player_stats['free_throws_made']/player_stats['free_throws_attempt']*100 if player_stats['free_throws_attempt'] > 0 else 0)
+                }
+                fig1 = go.Figure()
+                fig1.add_trace(go.Scatterpolar(
+                    r=list(shooting_percentages.values()),
+                    theta=list(shooting_percentages.keys()),
+                    fill='toself'
+                ))
+                fig1.update_layout(
+                    polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                    showlegend=False,
+                    title="슈팅 성공률 (%)"
+                )
+                st.plotly_chart(fig1)
             
             with col2:
-                st.write("**슈팅 기록**")
-                
-                # 슈팅 기록 계산
-                two_point_pct = f"{(player_stats['two_points_made']/player_stats['two_points_attempt']*100):.1f}%" if player_stats['two_points_attempt'] > 0 else "0.0%"
-                three_point_pct = f"{(player_stats['three_points_made']/player_stats['three_points_attempt']*100):.1f}%" if player_stats['three_points_attempt'] > 0 else "0.0%"
-                ft_pct = f"{(player_stats['free_throws_made']/player_stats['free_throws_attempt']*100):.1f}%" if player_stats['free_throws_attempt'] > 0 else "0.0%"
-                
-                # 슈팅 기록을 데이터프레임으로 표시
-                shooting_stats = pd.DataFrame({
-                    '구분': ['2점 슛', '3점 슛', '자유투'],
-                    '성공/시도': [
-                        f"{player_stats['two_points_made']}/{player_stats['two_points_attempt']}",
-                        f"{player_stats['three_points_made']}/{player_stats['three_points_attempt']}",
-                        f"{player_stats['free_throws_made']}/{player_stats['free_throws_attempt']}"
-                    ],
-                    '성공률': [two_point_pct, three_point_pct, ft_pct]
-                })
-                st.dataframe(shooting_stats, hide_index=True)
-            
-            # 레이더 차트 표시
-            st.subheader(f"{player_number}번 {selected_player}의 레이더 차트")
-            generate_radar_chart(player_stats)
+                # 종합 기여도 차트
+                contribution_stats = {
+                    '득점': min(player_stats['points'] * 4, 100),
+                    '리바운드': min(player_stats['rebounds'] * 10, 100),
+                    '어시스트': min(player_stats['assists'] * 10, 100),
+                    '스틸': min(player_stats['steals'] * 20, 100),
+                    '블록': min(player_stats['blocks'] * 20, 100),
+                    '턴오버': min(100 - player_stats['turnovers'] * 10, 100)
+                }
+                fig2 = go.Figure()
+                fig2.add_trace(go.Scatterpolar(
+                    r=list(contribution_stats.values()),
+                    theta=list(contribution_stats.keys()),
+                    fill='toself'
+                ))
+                fig2.update_layout(
+                    polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                    showlegend=False,
+                    title="종합 기여도"
+                )
+                st.plotly_chart(fig2)
         else:
             st.error(f"DB에서 {selected_player}의 기록을 찾을 수 없습니다. (game_date: {game_date}, team: {team_name})")
 
@@ -261,7 +343,7 @@ def show_game_page():
                     '4Q': [selected_game['team1_q4'], selected_game['team2_q4']],
                     '총점': [selected_game['team1_points'], selected_game['team2_points']]
                 })
-                st.dataframe(score_df, hide_index=True)
+                st.dataframe(score_df, hide_index=True, use_container_width=True)
                 
                 # 팀별 통계 표시
                 st.write("#### 팀 스탯")

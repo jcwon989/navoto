@@ -415,35 +415,29 @@ def get_or_create_player(player_name, team, player_number):
                  (player_name, team))
         return c.fetchone()[0]
 
-def get_player_career_stats(player_name, team=None):
-    """선수의 전체 경기 통산 기록 조회"""
-    with get_db_connection() as conn:
-        query = '''
-        SELECT 
-            COUNT(DISTINCT game_date) as games_played,
-            AVG(points) as avg_points,
-            AVG(rebounds) as avg_rebounds,
-            AVG(assists) as avg_assists,
-            AVG(steals) as avg_steals,
-            AVG(blocks) as avg_blocks,
-            AVG(turnovers) as avg_turnovers,
-            SUM(two_points_made) as total_2pm,
-            SUM(two_points_attempt) as total_2pa,
-            SUM(three_points_made) as total_3pm,
-            SUM(three_points_attempt) as total_3pa,
-            SUM(free_throws_made) as total_ftm,
-            SUM(free_throws_attempt) as total_fta
-        FROM player_stats
-        WHERE player = ? {}
-        GROUP BY player
-        '''.format('AND team = ?' if team else '')
-        
-        params = (player_name, team) if team else (player_name,)
-        df = pd.read_sql_query(query, conn, params=params)
-        
-        if not df.empty:
-            df['fg_percentage'] = (df['total_2pm'] + df['total_3pm']) / (df['total_2pa'] + df['total_3pa']) * 100
-            df['three_point_percentage'] = df['total_3pm'] / df['total_3pa'] * 100
-            df['ft_percentage'] = df['total_ftm'] / df['total_fta'] * 100
-            
-        return df.iloc[0] if not df.empty else None 
+def get_player_career_stats(player_name):
+    """선수의 통산 기록 조회"""
+    query = '''
+    SELECT 
+        COUNT(*) as games_played,
+        AVG(points) as avg_points,
+        AVG(rebounds) as avg_rebounds,
+        AVG(assists) as avg_assists,
+        AVG(steals) as avg_steals,
+        AVG(blocks) as avg_blocks,
+        AVG(turnovers) as avg_turnovers,
+        AVG(minutes) as avg_minutes,
+        SUM(two_points_made) as total_2pm,
+        SUM(two_points_attempt) as total_2pa,
+        SUM(three_points_made) as total_3pm,
+        SUM(three_points_attempt) as total_3pa,
+        SUM(free_throws_made) as total_ftm,
+        SUM(free_throws_attempt) as total_fta
+    FROM player_stats
+    WHERE player = ?
+    '''
+    with sqlite3.connect(DB_PATH) as conn:
+        df = pd.read_sql_query(query, conn, params=(player_name,))
+        if df['games_played'].iloc[0] > 0:
+            return df.iloc[0]
+        return None 
