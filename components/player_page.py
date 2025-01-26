@@ -116,14 +116,15 @@ def create_trend_chart(games_stats, title):
             tickangle=0,
             tickfont=dict(size=11)
         ),
-        margin=dict(b=30),
+        margin=dict(l=50, r=50, t=50, b=50),
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
             xanchor="right",
             x=1
-        )
+        ),
+        autosize=True
     )
     return fig
 
@@ -290,7 +291,17 @@ def show_player_page():
             st.subheader("최근 경기 트렌드")
             recent_games = get_player_recent_games(selected_player, selected_league)
             if not recent_games.empty:
-                st.plotly_chart(create_trend_chart(recent_games, "최근 5경기 기록"))
+                st.markdown("""
+                <style>
+                .element-container:has([data-testid="stPlotlyChart"]) {
+                    min-width: 300px !important;
+                    max-width: 900px !important;
+                    width: 100% !important;
+                    margin: 0 auto !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                st.plotly_chart(create_trend_chart(recent_games, "최근 5경기 기록"), use_container_width=True)
             
             # 5. 상세 기록 테이블
             st.subheader("경기별 상세 기록")
