@@ -76,7 +76,11 @@ def create_radar_chart(stats, title):
                 range=[0, 100]
             )),
         showlegend=False,
-        title=title
+        title=title,
+        width=350,
+        height=350,
+        margin=dict(l=50, r=50, t=50, b=50),
+        autosize=False
     )
     return fig
 

@@ -270,7 +270,11 @@ def show_player_stats(df, team_name, game_date):
                 fig1.update_layout(
                     polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
                     showlegend=False,
-                    title="슈팅 성공률 (%)"
+                    title="슈팅 성공률 (%)",
+                    width=350,
+                    height=350,
+                    margin=dict(l=50, r=50, t=50, b=50),
+                    autosize=False
                 )
                 st.plotly_chart(fig1)
             
@@ -293,7 +297,11 @@ def show_player_stats(df, team_name, game_date):
                 fig2.update_layout(
                     polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
                     showlegend=False,
-                    title="종합 기여도"
+                    title="종합 기여도",
+                    width=350,
+                    height=350,
+                    margin=dict(l=50, r=50, t=50, b=50),
+                    autosize=False
                 )
                 st.plotly_chart(fig2)
         else:
