@@ -77,10 +77,8 @@ def create_radar_chart(stats, title):
             )),
         showlegend=False,
         title=title,
-        width=350,
-        height=350,
         margin=dict(l=50, r=50, t=50, b=50),
-        autosize=False
+        autosize=True
     )
     return fig
 
@@ -273,7 +271,7 @@ def show_player_page():
                     '3점슛': (career_stats['total_3pm']/career_stats['total_3pa']*100 if career_stats['total_3pa'] > 0 else 0),
                     '자유투': (career_stats['total_ftm']/career_stats['total_fta']*100 if career_stats['total_fta'] > 0 else 0)
                 }
-                st.plotly_chart(create_radar_chart(shooting_stats, "슈팅 성공률 (%)"))
+                st.plotly_chart(create_radar_chart(shooting_stats, "슈팅 성공률 (%)"), use_container_width=True)
             
             with col2:
                 # 종합 기여도 차트

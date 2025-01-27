@@ -34,13 +34,13 @@ def show_team_ranking_page():
                     ),
                     "팀명": st.column_config.TextColumn(
                         "팀명",
-                        width="medium"
+                        width="small",
                     ),
                     "경기수": st.column_config.NumberColumn(
                         "경기수",
                         help="총 경기 수",
                         format="%d",
-                        width="small"
+                        width="small",
                     ),
                     "승": st.column_config.NumberColumn(
                         "승",

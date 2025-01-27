@@ -131,9 +131,9 @@ def show_player_stats(df, team_name, game_date):
                     width=350,
                     height=350,
                     margin=dict(l=50, r=50, t=50, b=50),
-                    autosize=False
+                    autosize=True
                 )
-                st.plotly_chart(fig1)
+                st.plotly_chart(fig1, use_container_width=True)
             
             with col2:
                 # 종합 기여도 차트
@@ -158,9 +158,9 @@ def show_player_stats(df, team_name, game_date):
                     width=350,
                     height=350,
                     margin=dict(l=50, r=50, t=50, b=50),
-                    autosize=False
+                    autosize=True
                 )
-                st.plotly_chart(fig2)
+                st.plotly_chart(fig2, use_container_width=True)
         else:
             st.error(f"DB에서 {selected_player}의 기록을 찾을 수 없습니다. (game_date: {game_date}, team: {team_name})")
 
