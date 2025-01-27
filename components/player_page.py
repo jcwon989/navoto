@@ -283,7 +283,7 @@ def show_player_page():
                     '블록': min(career_stats['avg_blocks'] * 20, 100),
                     '턴오버': min(100 - career_stats['avg_turnovers'] * 10, 100)
                 }
-                st.plotly_chart(create_radar_chart(contribution_stats, "종합 기여도"))
+                st.plotly_chart(create_radar_chart(contribution_stats, "종합 기여도"), use_container_width=True)
             
             # 4. 최근 경기 트렌드
             st.subheader("최근 경기 트렌드")
