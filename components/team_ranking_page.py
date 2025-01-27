@@ -30,7 +30,7 @@ def show_team_ranking_page():
                         "순위",
                         help="순위",
                         format="%d",
-                        width="small"
+                        width=None
                     ),
                     "팀명": st.column_config.TextColumn(
                         "팀명",
@@ -40,48 +40,48 @@ def show_team_ranking_page():
                         "경기수",
                         help="총 경기 수",
                         format="%d",
-                        width="small",
+                        width=None
                     ),
                     "승": st.column_config.NumberColumn(
                         "승",
                         help="승리",
                         format="%d",
-                        width="small"
+                        width=None
                     ),
                     "패": st.column_config.NumberColumn(
                         "패",
                         help="패배",
                         format="%d",
-                        width="small"
+                        width=None
                     ),
                     "승률": st.column_config.NumberColumn(
                         "승률",
                         help="승률",
                         format="%.3f",
-                        width="small"
+                        width=None
                     ),
                     "득점": st.column_config.NumberColumn(
                         "득점",
                         help="평균 득점",
                         format="%.1f",
-                        width="small"
+                        width=None
                     ),
                     "실점": st.column_config.NumberColumn(
                         "실점",
                         help="평균 실점",
                         format="%.1f",
-                        width="small"
+                        width=None
                     ),
                     "득실차": st.column_config.NumberColumn(
                         "득실차",
                         help="평균 득실차",
                         format="%.1f",
-                        width="small"
+                        width=None
                     ),
                     "연속": st.column_config.TextColumn(
                         "연속",
                         help="최근 5경기",
-                        width="small"
+                        width=None
                     )
                 },
                 hide_index=True,

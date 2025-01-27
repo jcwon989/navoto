@@ -51,66 +51,66 @@ def show_player_ranking_page():
                         "순위",
                         help="순위",
                         format="%d",
-                        width="small"
+                        width=None
                     ),
                     "선수명": st.column_config.TextColumn(
                         "선수명",
-                        width="small"
+                        width=None
                     ),
                     "팀명": st.column_config.TextColumn(
                         "팀명",
-                        width="small"
+                        width=None
                     ),
                     "경기수": st.column_config.NumberColumn(
                         "경기수",
                         help="출전 경기 수",
                         format="%d",
-                        width="small"
+                        width=None
                     ),
                     "출전시간": st.column_config.TextColumn(
                         "출전시간",
                         help="평균 출전시간",
-                        width="small"
+                        width=None
                     ),
                     "득점": st.column_config.TextColumn(
                         "득점",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     ),
                     "리바운드": st.column_config.TextColumn(
                         "리바운드",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     ),
                     "어시스트": st.column_config.TextColumn(
                         "어시스트",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     ),
                     "스틸": st.column_config.TextColumn(
                         "스틸",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     ),
                     "블록": st.column_config.TextColumn(
                         "블록",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     ),
                     "3점슛": st.column_config.TextColumn(
                         "3점슛",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     ),
                     "자유투": st.column_config.TextColumn(
                         "자유투",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     ),
                     "효율값": st.column_config.TextColumn(
                         "효율값",
                         help="평균 (총합)",
-                        width="small"
+                        width=None
                     )
                 },
                 hide_index=True,
