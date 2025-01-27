@@ -553,7 +553,6 @@ def get_player_rankings(league_id, stat_column, limit=20):
                     AND (ps.team = gl.team1 OR ps.team = gl.team2)
                 WHERE gl.league_id = ?
                 GROUP BY ps.player, ps.team
-                HAVING games_played >= 3  -- 최소 3경기 이상 출전
             )
             SELECT 
                 ROW_NUMBER() OVER (ORDER BY avg_{stat_column} DESC) as 순위,
