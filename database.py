@@ -123,7 +123,7 @@ def is_game_exists(game_date, team1, team2):
     def _check():
         with get_db_connection() as conn:
             c = conn.cursor()
-            
+        
             # game_league 테이블에서 확인 (팀 순서 상관없이)
             c.execute('''SELECT COUNT(*) FROM game_league 
                         WHERE game_date = ? AND 
@@ -133,17 +133,17 @@ def is_game_exists(game_date, team1, team2):
             
             exists_in_game_league = c.fetchone()[0] > 0
             print(f"game_league 테이블 확인 결과: {exists_in_game_league}")
-                
+            
             # player_stats 테이블에서도 확인
             c.execute('''SELECT COUNT(*) FROM player_stats 
                         WHERE game_date = ? AND (team = ? OR team = ?)''', 
                      (game_date, team1, team2))
-            
+        
             exists_in_player_stats = c.fetchone()[0] > 0
             print(f"player_stats 테이블 확인 결과: {exists_in_player_stats}")
-            
+        
             return exists_in_game_league or exists_in_player_stats
-    
+        
     return execute_with_retry(_check)
 
 def save_game_data(game_date, team1, team2, team1_players, team1_total, team2_players, team2_total):
