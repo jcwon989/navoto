@@ -441,3 +441,139 @@ def get_player_career_stats(player_name):
         if df['games_played'].iloc[0] > 0:
             return df.iloc[0]
         return None 
+
+def get_team_rankings(league_id):
+    """특정 리그의 팀 순위 조회"""
+    def _get_rankings():
+        with get_db_connection() as conn:
+            # 팀별 경기 결과 조회
+            query = '''
+            WITH team_games AS (
+                -- 홈팀 기준 결과
+                SELECT 
+                    gl.team1 as team,
+                    gl.game_date,
+                    ts1.total_score as team_score,
+                    ts2.total_score as opponent_score,
+                    CASE WHEN ts1.total_score > ts2.total_score THEN 1 ELSE 0 END as win,
+                    CASE WHEN ts1.total_score < ts2.total_score THEN 1 ELSE 0 END as loss
+                FROM game_league gl
+                JOIN team_stats ts1 ON gl.game_date = ts1.game_date AND gl.team1 = ts1.team
+                JOIN team_stats ts2 ON gl.game_date = ts2.game_date AND gl.team2 = ts2.team
+                WHERE gl.league_id = ?
+                
+                UNION ALL
+                
+                -- 원정팀 기준 결과
+                SELECT 
+                    gl.team2 as team,
+                    gl.game_date,
+                    ts2.total_score as team_score,
+                    ts1.total_score as opponent_score,
+                    CASE WHEN ts2.total_score > ts1.total_score THEN 1 ELSE 0 END as win,
+                    CASE WHEN ts2.total_score < ts1.total_score THEN 1 ELSE 0 END as loss
+                FROM game_league gl
+                JOIN team_stats ts1 ON gl.game_date = ts1.game_date AND gl.team1 = ts1.team
+                JOIN team_stats ts2 ON gl.game_date = ts2.game_date AND gl.team2 = ts2.team
+                WHERE gl.league_id = ?
+            ),
+            team_summary AS (
+                SELECT 
+                    team,
+                    COUNT(*) as games,
+                    SUM(win) as wins,
+                    SUM(loss) as losses,
+                    CAST(SUM(win) AS FLOAT) / COUNT(*) as win_pct,
+                    AVG(team_score) as avg_points_for,
+                    AVG(opponent_score) as avg_points_against,
+                    AVG(team_score - opponent_score) as point_diff,
+                    GROUP_CONCAT(
+                        CASE 
+                            WHEN win = 1 THEN '승'
+                            ELSE '패'
+                        END
+                    ) as recent_results
+                FROM (
+                    SELECT *,
+                        ROW_NUMBER() OVER (PARTITION BY team ORDER BY game_date DESC) as game_num
+                    FROM team_games
+                ) ranked
+                WHERE game_num <= 5  -- 최근 5경기
+                GROUP BY team
+            )
+            SELECT 
+                ROW_NUMBER() OVER (ORDER BY win_pct DESC, point_diff DESC) as 순위,
+                team as 팀명,
+                games as 경기수,
+                wins as 승,
+                losses as 패,
+                win_pct as 승률,
+                ROUND(avg_points_for, 1) as 득점,
+                ROUND(avg_points_against, 1) as 실점,
+                ROUND(point_diff, 1) as 득실차,
+                recent_results as 연속
+            FROM team_summary
+            ORDER BY win_pct DESC, point_diff DESC
+            '''
+            
+            return pd.read_sql_query(query, conn, params=(league_id, league_id))
+    
+    return execute_with_retry(_get_rankings)
+
+def get_player_rankings(league_id, stat_column, limit=20):
+    """특정 리그의 개인 순위 조회"""
+    def _get_rankings():
+        with get_db_connection() as conn:
+            # 선수별 평균 기록 조회
+            query = f'''
+            WITH player_games AS (
+                SELECT 
+                    ps.player,
+                    ps.team,
+                    COUNT(DISTINCT ps.game_date) as games_played,
+                    AVG(ps.minutes) as avg_minutes,
+                    AVG(ps.points) as avg_points,
+                    SUM(ps.points) as total_points,
+                    AVG(ps.rebounds) as avg_rebounds,
+                    SUM(ps.rebounds) as total_rebounds,
+                    AVG(ps.assists) as avg_assists,
+                    SUM(ps.assists) as total_assists,
+                    AVG(ps.steals) as avg_steals,
+                    SUM(ps.steals) as total_steals,
+                    AVG(ps.blocks) as avg_blocks,
+                    SUM(ps.blocks) as total_blocks,
+                    AVG(ps.three_points_made) as avg_three_points,
+                    SUM(ps.three_points_made) as total_three_points,
+                    AVG(ps.free_throws_made) as avg_free_throws,
+                    SUM(ps.free_throws_made) as total_free_throws,
+                    AVG(ps.efficiency) as avg_efficiency,
+                    SUM(ps.efficiency) as total_efficiency
+                FROM player_stats ps
+                JOIN game_league gl ON ps.game_date = gl.game_date 
+                    AND (ps.team = gl.team1 OR ps.team = gl.team2)
+                WHERE gl.league_id = ?
+                GROUP BY ps.player, ps.team
+                HAVING games_played >= 3  -- 최소 3경기 이상 출전
+            )
+            SELECT 
+                ROW_NUMBER() OVER (ORDER BY avg_{stat_column} DESC) as 순위,
+                player as 선수명,
+                team as 팀명,
+                games_played as 경기수,
+                ROUND(avg_minutes, 1) || '분' as 출전시간,
+                ROUND(avg_points, 1) || ' (' || total_points || ')' as 득점,
+                ROUND(avg_rebounds, 1) || ' (' || total_rebounds || ')' as 리바운드,
+                ROUND(avg_assists, 1) || ' (' || total_assists || ')' as 어시스트,
+                ROUND(avg_steals, 1) || ' (' || total_steals || ')' as 스틸,
+                ROUND(avg_blocks, 1) || ' (' || total_blocks || ')' as 블록,
+                ROUND(avg_three_points, 1) || ' (' || total_three_points || ')' as "3점슛",
+                ROUND(avg_free_throws, 1) || ' (' || total_free_throws || ')' as 자유투,
+                ROUND(avg_efficiency, 1) || ' (' || total_efficiency || ')' as 효율값
+            FROM player_games
+            ORDER BY avg_{stat_column} DESC
+            LIMIT {limit}
+            '''
+            
+            return pd.read_sql_query(query, conn, params=(league_id,))
+    
+    return execute_with_retry(_get_rankings)

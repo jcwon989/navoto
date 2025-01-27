@@ -7,6 +7,8 @@ from database import init_db
 from components.player_page import show_player_page
 from components.game_page import show_game_page
 from components.upload_page import show_upload_page
+from components.team_ranking_page import show_team_ranking_page
+from components.player_ranking_page import show_player_ranking_page
 
 # 페이지 설정을 가장 먼저 호출
 st.set_page_config(
@@ -77,7 +79,7 @@ def main():
         st.session_state.db_initialized = True
     
     # 탭 메뉴
-    tab1, tab2, tab3 = st.tabs(["경기 기록", "선수 기록", "데이터 업로드"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["경기 기록", "선수 기록", "팀 순위", "개인 순위", "업로드"])
     
     # 경기 기록 탭
     with tab1:
@@ -87,8 +89,16 @@ def main():
     with tab2:
         show_player_page()
     
-    # 데이터 업로드 탭
+    # 팀 순위 탭
     with tab3:
+        show_team_ranking_page()
+    
+    # 개인 순위 탭
+    with tab4:
+        show_player_ranking_page()
+    
+    # 업로드 탭
+    with tab5:
         show_upload_page()
 
 if __name__ == "__main__":
